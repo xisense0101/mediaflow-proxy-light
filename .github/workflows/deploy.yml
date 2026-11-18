@@ -9,6 +9,9 @@ jobs:
   deploy:
     runs-on: [ self-hosted, Linux ]
     steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
       - name: Deploy MediaFlow Locally on VPS
         run: |
           set -e
@@ -31,6 +34,11 @@ jobs:
           if [ ! -f "config.toml" ]; then
               cp config-example.toml config.toml 2>/dev/null || true
           fi
+
+          echo "Deploying static assets to /var/www/mediaflow..."
+          sudo mkdir -p /var/www/mediaflow
+          sudo cp -rf "${GITHUB_WORKSPACE}/static/"* /var/www/mediaflow/
+          sudo chown -R ubuntu:ubuntu /var/www/mediaflow
 
           echo "Restarting mediaflow.service..."
           sudo systemctl restart mediaflow
