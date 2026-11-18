@@ -21,8 +21,10 @@ jobs:
 
           if [ ! -f "mediaflow-proxy-light" ] || [ ! -f "current_version.txt" ] || [ "$(cat current_version.txt)" != "$LATEST_RELEASE" ]; then
               echo "Fetching binary for version $LATEST_RELEASE..."
-              curl -fL -o mediaflow-proxy-light "https://github.com/mhdzumair/mediaflow-proxy-light/releases/download/${LATEST_RELEASE}/mediaflow-proxy-light-linux-x86_64"
-              chmod +x mediaflow-proxy-light
+              curl -fL -o mediaflow-proxy-light.tmp "https://github.com/mhdzumair/mediaflow-proxy-light/releases/download/${LATEST_RELEASE}/mediaflow-proxy-light-linux-x86_64"
+              chmod +x mediaflow-proxy-light.tmp
+              sudo systemctl stop mediaflow || true
+              mv -f mediaflow-proxy-light.tmp mediaflow-proxy-light
               echo "$LATEST_RELEASE" > current_version.txt
           fi
 
