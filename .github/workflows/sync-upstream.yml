@@ -1,0 +1,42 @@
+name: Sync Upstream & Auto-Update
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Fetch and Merge Upstream
+        run: |
+          git remote add upstream https://github.com/mhdzumair/mediaflow-proxy-light.git || true
+          git fetch upstream main --tags
+          
+          LOCAL_COMMIT=$(git rev-parse HEAD)
+          UPSTREAM_COMMIT=$(git rev-parse upstream/main)
+          
+          if [ "$LOCAL_COMMIT" != "$UPSTREAM_COMMIT" ]; then
+            echo "New upstream changes detected ($LOCAL_COMMIT -> $UPSTREAM_COMMIT). Merging..."
+            git merge --no-edit upstream/main || git merge --abort
+            git push origin main
+            echo "Successfully merged and pushed upstream updates."
+          else
+            echo "Already up to date with upstream."
+          fi
