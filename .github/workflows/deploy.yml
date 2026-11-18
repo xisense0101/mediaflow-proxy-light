@@ -7,44 +7,33 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: [ self-hosted, Linux ]
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Deploy MediaFlow Locally on VPS
+        run: |
+          set -e
+          echo "🚀 Starting MediaFlow Proxy Light deployment on VPS..."
+          mkdir -p /home/ubuntu/tvsetup
+          cd /home/ubuntu/tvsetup
 
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT }}
-          script: |
-            set -e
-            echo "🚀 Deploying MediaFlow Proxy Light on VPS..."
-            mkdir -p /home/ubuntu/tvsetup
-            cd /home/ubuntu/tvsetup
+          LATEST_RELEASE=$(curl -s https://api.github.com/repos/mhdzumair/mediaflow-proxy-light/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+          echo "Latest upstream release: $LATEST_RELEASE"
 
-            # Check latest release binary
-            LATEST_RELEASE=$(curl -s https://api.github.com/repos/mhdzumair/mediaflow-proxy-light/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
-            echo "Latest upstream release: $LATEST_RELEASE"
+          if [ ! -f "mediaflow-proxy-light" ] || [ ! -f "current_version.txt" ] || [ "$(cat current_version.txt)" != "$LATEST_RELEASE" ]; then
+              echo "Fetching binary for version $LATEST_RELEASE..."
+              curl -fL -o mediaflow-proxy-light "https://github.com/mhdzumair/mediaflow-proxy-light/releases/download/${LATEST_RELEASE}/mediaflow-proxy-light-linux-x86_64"
+              chmod +x mediaflow-proxy-light
+              echo "$LATEST_RELEASE" > current_version.txt
+          fi
 
-            if [ ! -f "mediaflow-proxy-light" ] || [ ! -f "current_version.txt" ] || [ "$(cat current_version.txt)" != "$LATEST_RELEASE" ]; then
-                echo "Fetching binary for version $LATEST_RELEASE..."
-                curl -fL -o mediaflow-proxy-light "https://github.com/mhdzumair/mediaflow-proxy-light/releases/download/${LATEST_RELEASE}/mediaflow-proxy-light-linux-x86_64"
-                chmod +x mediaflow-proxy-light
-                echo "$LATEST_RELEASE" > current_version.txt
-            fi
+          if [ ! -f "config.toml" ]; then
+              cp config-example.toml config.toml 2>/dev/null || true
+          fi
 
-            # Check config.toml has path = "/mediaflow"
-            if [ ! -f "config.toml" ]; then
-                cp config-example.toml config.toml 2>/dev/null || true
-            fi
+          echo "Restarting mediaflow.service..."
+          sudo systemctl restart mediaflow
+          sleep 2
 
-            # Restart systemd service
-            sudo systemctl restart mediaflow
-            sleep 2
-
-            # Verify health
-            curl -s -I http://127.0.0.1:8888/speedtest.html | grep -q "200 OK"
-            echo "✅ MediaFlow Proxy Light deployed and verified successfully!"
+          echo "Verifying service health..."
+          curl -s -I http://127.0.0.1:8888/speedtest.html | grep -q "200 OK"
+          echo "✅ MediaFlow Proxy Light successfully deployed and verified!"
