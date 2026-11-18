@@ -11,7 +11,7 @@ path = ""    # Public URL path prefix behind reverse proxies, e.g. "/mediaflow/p
 [proxy]
 connect_timeout = 30    # TCP handshake timeout (seconds)
 follow_redirects = true
-buffer_size = 262144    # Streaming buffer size in bytes (256 KB)
+buffer_size = 1048576    # Streaming buffer size in bytes (256 KB)
 proxy_url = ""          # Default proxy URL (supports http/https/socks4/socks5)
 all_proxy = false       # If true, route all traffic through proxy_url
 
